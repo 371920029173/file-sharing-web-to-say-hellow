@@ -31,7 +31,12 @@ npm run build:cf
 npm run deploy:cf
 ```
 
-或把本目录推送到新 GitHub 仓库，在 Cloudflare Pages 里连该仓库，构建命令填 `npm run build:cf`，输出目录填 `.vercel/output/static`，环境变量从 wrangler.toml 里抄到 Pages 的 Variables。
+或把本目录推送到新 GitHub 仓库，在 Cloudflare Pages 里连该仓库：
+
+- **构建命令**：`npx @cloudflare/next-on-pages@1`（或 `npm run build:cf`）
+- **构建输出目录**：**`.vercel/output/static`**（注意是**英文句点开头** `.vercel`，不要写成 `./vercel`，否则可能部署失败）
+- **生产分支**：`main`
+- **环境变量**：在 Pages → 设置 → 变量里添加，与 wrangler.toml 的 `[vars]` 一致（`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`NEXT_PUBLIC_MAIN_SITE_URL` 等）
 
 ## 逻辑说明
 

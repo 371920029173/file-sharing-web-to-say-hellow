@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 
 const MAIN_SITE_URL = process.env.NEXT_PUBLIC_MAIN_SITE_URL || 'https://weavelink.pages.dev'
 
@@ -22,10 +22,91 @@ function getFingerprint(): string {
   return 'fp_' + Math.abs(h).toString(36)
 }
 
+const features = [
+  { title: '云盘存储', desc: '个人空间，文件分类管理', icon: '📁' },
+  { title: '公开分享', desc: '一键生成链接，支持多格式', icon: '🔗' },
+  { title: '论坛社区', desc: '发帖交流，资源与想法同频', icon: '💬' },
+  { title: '安全可靠', desc: '稳定存储，隐私与安全兼顾', icon: '🔒' },
+]
+
+const navItems = [
+  { id: 'intro', label: '简介' },
+  { id: 'tech', label: '技术栈' },
+  { id: 'features', label: '平台特色' },
+  { id: 'article', label: '招牌文章' },
+  { id: 'cta', label: '前往主站' },
+]
+
+// 顶部/底部广告位：循环展示用占位（可替换为 AdSense 等，两个位置都要放）
+const AD_SLIDES = [
+  { id: 1, label: '广告位 1' },
+  { id: 2, label: '广告位 2' },
+  { id: 3, label: '广告位 3' },
+]
+
+// 招牌文章：节选自 aaa.txt（长月烬明：烬揽星河 第1章）
+const ARTICLE = {
+  title: '长月烬明：烬揽星河（第1章）',
+  paragraphs: [
+    '魔渊之底，无天无日，连时间都似被这万年不散的阴气冻结。',
+    '寒岩沁出的霜气穿透玄色衣料，像无数细针密密麻麻扎进肌理，澹台烬是被胸口那道蚀骨的痛感拽回意识的。他猛地睁开眼，漆黑的眸底先闪过一丝茫然，随即被翻涌的浊气与灵力绞杀的剧痛填满——左肩斜划至右腹的伤口深可见骨，边缘泛着死灰般的魔气，正与骨血里渗出的清冽仙力疯狂冲撞，每一次交锋都让他的神魂震颤，仿佛要被生生撕裂。',
+    '"咳……咳咳……"',
+    '他俯身咳出一口黑血，血珠落在粗糙的寒岩上，瞬间被地面蔓延的暗紫色魔气吞噬，只余下一点转瞬即逝的白痕，像从未存在过。撑着地面缓缓坐起时，指腹触到的岩石冰冷刺骨，掌心却不自觉凝聚起一缕灵力，金黑二色交织的光纹在指尖流转，比二百年前更显暴戾，也更显诡异——那是仙魔之力彻底交融的迹象，是他曾经最忌惮的存在，如今却成了支撑他残魂不散的枷锁。',
+    '二百年了。',
+    '这三个字在脑海中盘旋，碎片般的记忆随之汹涌而来：诛仙台的雷光劈碎他的魔核，天地间都是刺目的惨白；黎苏苏握剑的手微微颤抖，指尖泛白，剑尖最终还是毫不犹豫地刺穿他的胸口，那句"澹台烬，为了三界"轻飘飘的，却比任何利刃都锋利；荒渊裂隙崩塌前，那道藏在云层后、带着恶意与算计的目光，还有体内突然涌入的、不受控制的狂暴力量，将他推向万劫不复的深渊。',
+    '他本应魂飞魄散。以自身魔核为引布下九转封印，镇压荒渊异动，神魂却在仙魔反噬与那股诡异力量的夹击下碎裂，坠入这三界遗弃的魔渊。可如今，他不仅活着，体内还多了一股陌生却强悍的混沌之力，正顺着经脉缓缓流淌，修复着他残缺的神魂，也在悄悄改写着他的灵力根基。',
+    '"看来，九转封印没能彻底灭了你。"',
+    '一道苍老沙哑的声音从黑暗中传来，带着浓浓的魔气，却又夹杂着一丝不易察觉的仙泽，打破了魔渊的死寂。澹台烬猛地抬眼，眸底寒光暴涨，周身气息瞬间绷紧，指尖的金黑灵力已然凝聚成刃，随时准备发难："谁？"',
+    '黑影从岩缝的阴影里缓缓走出，身形佝偻，宽大的黑袍兜帽遮住了整张面容，只露出一双浑浊的幽绿眼眸，像两簇跳动的鬼火。他停在三丈外，周身气息若有若无，却与澹台烬体内的力量隐隐呼应，既非纯魔，亦非纯仙，更像是两种力量扭曲融合后的怪物。',
+    '"老夫是谁不重要。"黑影轻笑一声，声音像砂砾摩擦石板，刺耳又沉闷，"重要的是，老夫能帮你稳住体内躁动的仙魔之力，还能让你找到当年害你神魂碎裂、坠入魔渊的真凶。"',
+    '澹台烬神色未动，周身的威压却又冷了几分。二百年的背叛与算计，早已让他不信任何人，尤其是这种藏头露尾、目的不明的存在。他指尖的灵力又凝实了几分，语气冰冷无温，没有半分多余的情绪："你想要什么？天下没有免费的午餐。"',
+    '"果然是前魔主，性子还是这般通透。"黑影抬手，掌心缓缓浮现一枚灰黑色的令牌，令牌上刻着诡异的魔神纹路，纹路间流淌着淡淡的混沌气息，与澹台烬体内的陌生力量隐隐共鸣，"帮老夫找到散落在三界的三枚魔神残片，老夫便给你融合仙魔之力的完整法门，再告诉你当年荒渊异动的全部真相——你以为，真的是你失控才开启荒渊？那股突然涌入你体内的狂暴力量，又来自何处？"',
+    '最后一句话像一道惊雷，狠狠炸在澹台烬的脑海中。当年他失控开启荒渊，一直是他心中的刺，哪怕他身为魔主，也始终认为是自己的魔性没能压制，才险些酿成三界浩劫。可如今想来，那股力量太过诡异，带着不属于仙也不属于魔的暴戾，更像是有人刻意注入他体内，就是为了逼他失控，逼他走向毁灭。',
+    '他沉默了片刻，漆黑的眸底翻涌着复杂的情绪，有恨意，有不甘，还有一丝不易察觉的疑惑。最终，他缓缓颔首，语气坚定，带着不容置疑的决绝："好。我帮你找残片。但我要你保证，不得耍花样，若是敢欺瞒我半分，我定将你挫骨扬灰，让你永世不得超生。"',
+    '黑影眼中闪过一丝得逞的光芒，快得让人抓不住，他抬手将令牌抛给澹台烬："这枚引魂令能感知残片气息，你先收好。魔渊之上，衡阳宗的人已经在寻你了——那位黎掌门，可是对你\'念念不忘\'，这二百年里，没少派人来魔渊探查你的踪迹。"',
+    '黎苏苏。',
+    '这个名字落在心底，像一把冰锥狠狠扎入，泛起密密麻麻的疼，疼过之后，便是蚀骨的寒意。澹台烬握紧引魂令，指节泛白，骨缝间因用力而微微泛青，漆黑的眸底翻涌着恨意与不甘，还有一丝连他自己都不愿承认的复杂情绪，最终尽数沉淀为冰冷的漠然。',
+    '"走吧。"他缓缓站起身，玄色衣袍在魔气中无风自动，衣摆扫过地面的碎石，发出细微的声响，"先离开魔渊。"',
+    '黑影紧随其后，两人踏着冰冷的寒岩，朝着魔渊出口缓缓走去。黑暗中，澹台烬的侧脸冷硬如石，线条凌厉得没有一丝温度，只有他自己知道，那句"为了三界"，还在他的神魂深处反复回响，像一道永远无法愈合的伤疤。',
+  ],
+}
+
 export default function HomePage() {
   const [username, setUsername] = useState('')
-  const [message, setMessage] = useState< string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [dbStatus, setDbStatus] = useState<'idle' | 'checking' | 'ok' | 'fail'>('idle')
+  const [dbError, setDbError] = useState<string | null>(null)
+  const [topAdIndex, setTopAdIndex] = useState(0)
+  const [bottomAdIndex, setBottomAdIndex] = useState(0)
+  const [sideNavOpen, setSideNavOpen] = useState(false)
+  const sectionRefs = useRef<Record<string, HTMLElement | null>>({})
+
+  useEffect(() => {
+    setDbStatus('checking')
+    fetch('/api/db-check')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.ok) setDbStatus('ok')
+        else {
+          setDbStatus('fail')
+          setDbError(data.error || '未知错误')
+        }
+      })
+      .catch(() => {
+        setDbStatus('fail')
+        setDbError('请求失败')
+      })
+  }, [])
+
+  useEffect(() => {
+    const t = setInterval(() => setTopAdIndex((i) => (i + 1) % AD_SLIDES.length), 5000)
+    return () => clearInterval(t)
+  }, [])
+  useEffect(() => {
+    const t = setInterval(() => setBottomAdIndex((i) => (i + 1) % AD_SLIDES.length), 5000)
+    return () => clearInterval(t)
+  }, [])
 
   const handleSync = useCallback(async () => {
     setMessage(null)
@@ -38,11 +119,7 @@ export default function HomePage() {
         body: JSON.stringify({ username: username.trim() || undefined, fingerprint: fp }),
       })
       const data = await res.json()
-      if (data.success && data.valid && data.message) {
-        setMessage(data.message)
-      } else if (data.success && !data.valid && data.message) {
-        setMessage(data.message)
-      }
+      if (data.success && data.message) setMessage(data.message)
     } catch {
       setMessage('网络异常，请稍后再试')
     } finally {
@@ -50,63 +127,258 @@ export default function HomePage() {
     }
   }, [username])
 
+  const scrollTo = (id: string) => {
+    setSideNavOpen(false)
+    const el = sectionRefs.current[id] ?? document.getElementById(id)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50">
-      <div className="max-w-2xl mx-auto px-6 py-16">
-        <h1 className="text-3xl md:text-4xl font-bold text-slate-800 text-center mb-3">
-          Weavelink
-        </h1>
-        <p className="text-slate-600 text-center mb-2">文件分享平台</p>
-        <p className="text-slate-500 text-sm text-center mb-12">
-          资源与你同频，信息予你无限
-        </p>
-
-        <div className="bg-white/80 backdrop-blur rounded-2xl shadow-lg border border-slate-200/60 p-8 mb-8">
-          <p className="text-slate-700 leading-relaxed mb-6">
-            我们提供安全、便捷的文件存储与分享，支持云盘、公开分享、私信传输与论坛社区。
-            上传文件最大 50MB，支持图片、视频、音频、文档等多种格式。
-          </p>
-          <p className="text-slate-600 text-sm leading-relaxed mb-8">
-            若您已在主站注册，可在此填写账号名以便同步；未填写或账号不存在则视为公益支持，感谢您。
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-3 mb-6">
-            <input
-              type="text"
-              placeholder="输入主站账号名（选填）"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="flex-1 px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-slate-800 placeholder-slate-400"
-            />
+    <div className="min-h-screen flex bg-slate-50">
+      {/* 侧边导航 - Dropbox 风格 */}
+      <aside
+        className={`
+          fixed top-0 left-0 z-40 h-full w-56 bg-white border-r border-slate-200/80
+          transition-transform duration-200 ease-out md:translate-x-0
+          ${sideNavOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}
+      >
+        <div className="sticky top-0 pt-6 pb-6 pl-6 pr-4">
+          <div className="flex items-center justify-between mb-6 md:mb-4">
+            <span className="font-semibold text-slate-800">Weavelink</span>
             <button
               type="button"
-              onClick={handleSync}
-              disabled={loading}
-              className="px-6 py-3 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-60 transition-colors"
+              className="md:hidden p-2 -mr-2 text-slate-500 hover:text-slate-700"
+              onClick={() => setSideNavOpen(false)}
+              aria-label="关闭导航"
             >
-              {loading ? '处理中…' : '确认'}
+              ✕
             </button>
           </div>
-          {message && (
-            <p className="text-center text-slate-700 font-medium py-2">{message}</p>
-          )}
+          <nav className="flex flex-col gap-1">
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => scrollTo(item.id)}
+                className="text-left px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </aside>
 
-          <div className="pt-6 border-t border-slate-200">
+      {/* 移动端侧栏遮罩 */}
+      {sideNavOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/20 md:hidden"
+          aria-hidden
+          onClick={() => setSideNavOpen(false)}
+        />
+      )}
+
+      {/* 移动端打开侧栏按钮 */}
+      <button
+        type="button"
+        className="fixed top-4 left-4 z-30 md:hidden px-3 py-2 rounded-lg bg-white/90 border border-slate-200 shadow-sm text-slate-700 text-sm"
+        onClick={() => setSideNavOpen(true)}
+        aria-label="打开导航"
+      >
+        目录
+      </button>
+
+      <main className="flex-1 md:ml-56 min-h-screen">
+        {/* 顶部循环广告位 */}
+        <section className="relative h-20 md:h-24 bg-slate-100 border-b border-slate-200 overflow-hidden" aria-label="广告">
+          {AD_SLIDES.map((slide, i) => (
+            <div
+              key={slide.id}
+              className="absolute inset-0 flex items-center justify-center transition-opacity duration-500"
+              style={{
+                opacity: topAdIndex === i ? 1 : 0,
+                pointerEvents: topAdIndex === i ? 'auto' : 'none',
+              }}
+            >
+              <div className="text-slate-400 text-sm">
+                {slide.label}（此处可放置 AdSense 等）
+              </div>
+            </div>
+          ))}
+        </section>
+
+        <div className="max-w-2xl mx-auto px-6 py-10 md:py-14">
+          {/* Hero - Stripe 风格渐变标题 */}
+          <section
+            id="intro"
+            ref={(el) => { sectionRefs.current.intro = el }}
+            className="mb-16 animate-fade-in-up opacity-0"
+            style={{ animationFillMode: 'forwards' }}
+          >
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-slate-800 mb-3 leading-tight">
+              资源与你同频，
+              <br />
+              <span className="bg-gradient-to-r from-blue-600 via-indigo-500 to-slate-700 bg-[length:200%_auto] animate-gradient bg-clip-text text-transparent">
+                信息予你无限。
+              </span>
+            </h1>
+            <p className="text-slate-600 text-lg mt-4">
+              Weavelink 文件分享平台 · 安全便捷的云盘、分享与论坛
+            </p>
+          </section>
+
+          {/* 简介 */}
+          <section className="mb-16">
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">简介</h2>
+            <p className="text-slate-700 leading-relaxed mb-4">
+              我们提供安全、便捷的文件存储与分享，支持云盘、公开分享、私信传输与论坛社区。
+              上传文件最大 50MB，支持图片、视频、音频、文档等多种格式。
+            </p>
+            <p className="text-slate-600 text-sm leading-relaxed">
+              若您已在主站注册，可在下方填写账号名以便同步；未填写或账号不存在则视为公益支持，感谢您。
+            </p>
+          </section>
+
+          {/* 技术栈 - 一页过审 */}
+          <section
+            id="tech"
+            ref={(el) => { sectionRefs.current.tech = el }}
+            className="mb-16 scroll-mt-6"
+          >
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">技术栈</h2>
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm">
+              <ul className="space-y-3 text-slate-700 text-sm">
+                <li><strong>前端</strong>：Next.js 15、React 18、TypeScript、Tailwind CSS</li>
+                <li><strong>后端 / 数据</strong>：Supabase（PostgreSQL、Auth、Row Level Security）</li>
+                <li><strong>部署</strong>：Cloudflare Pages（@cloudflare/next-on-pages）</li>
+                <li><strong>本介绍页</strong>：与主站共用同一 Supabase 项目；设备指纹限流，每日有效同步次数限制。</li>
+              </ul>
+            </div>
+          </section>
+
+          {/* 平台特色 */}
+          <section
+            id="features"
+            ref={(el) => { sectionRefs.current.features = el }}
+            className="mb-16 scroll-mt-6"
+          >
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">平台特色</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {features.map((f, i) => (
+                <div
+                  key={i}
+                  className="bg-white rounded-xl border border-slate-200/80 px-4 py-4 text-center shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <span className="text-2xl block mb-1" aria-hidden>{f.icon}</span>
+                  <div className="font-medium text-slate-800 text-sm">{f.title}</div>
+                  <div className="text-slate-500 text-xs mt-0.5">{f.desc}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* 招牌文章 */}
+          <section
+            id="article"
+            ref={(el) => { sectionRefs.current.article = el }}
+            className="mb-16 scroll-mt-6"
+          >
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">招牌文章</h2>
+            <article className="bg-white rounded-2xl border border-slate-200/80 p-6 md:p-8 shadow-sm">
+              <h3 className="text-lg font-semibold text-slate-800 mb-4">{ARTICLE.title}</h3>
+              <div className="space-y-4 text-slate-700 leading-relaxed text-sm md:text-base">
+                {ARTICLE.paragraphs.map((p, i) => (
+                  <p key={i}>{p}</p>
+                ))}
+              </div>
+            </article>
+          </section>
+
+          {/* CTA：同步 + 去看看主站 */}
+          <section
+            id="cta"
+            ref={(el) => { sectionRefs.current.cta = el }}
+            className="mb-16 scroll-mt-6"
+          >
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">前往主站</h2>
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-6 md:p-8 shadow-sm">
+              <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                <input
+                  type="text"
+                  placeholder="输入主站账号名（选填）"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="flex-1 px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-slate-800 placeholder-slate-400"
+                />
+                <button
+                  type="button"
+                  onClick={handleSync}
+                  disabled={loading}
+                  className="px-6 py-3 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-60 transition-colors"
+                >
+                  {loading ? '处理中…' : '确认'}
+                </button>
+              </div>
+              {message && (
+                <p className="text-center text-slate-700 font-medium py-2">{message}</p>
+              )}
+              <a
+                href={MAIN_SITE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full py-4 rounded-xl bg-slate-800 text-white text-center font-medium hover:bg-slate-900 transition-colors"
+              >
+                去看看主站 →
+              </a>
+            </div>
+          </section>
+        </div>
+
+        {/* 底部循环广告位 */}
+        <section className="relative h-20 md:h-24 bg-slate-100 border-t border-slate-200 overflow-hidden" aria-label="广告">
+          {AD_SLIDES.map((slide, i) => (
+            <div
+              key={slide.id}
+              className="absolute inset-0 flex items-center justify-center transition-opacity duration-500"
+              style={{
+                opacity: bottomAdIndex === i ? 1 : 0,
+                pointerEvents: bottomAdIndex === i ? 'auto' : 'none',
+              }}
+            >
+              <div className="text-slate-400 text-sm">
+                {slide.label}（此处可放置 AdSense 等）
+              </div>
+            </div>
+          ))}
+        </section>
+
+        <footer className="border-t border-slate-200/80 bg-white/80 py-4">
+          <div className="max-w-2xl mx-auto px-6 text-center space-y-1">
+            <div className="text-xs text-slate-400">
+              Supabase：
+              {dbStatus === 'checking' && <span>检查中…</span>}
+              {dbStatus === 'ok' && <span className="text-green-600 font-medium">已连接</span>}
+              {dbStatus === 'fail' && (
+                <span className="text-red-600" title={dbError ?? undefined}>
+                  未连接{dbError ? `（${dbError}）` : ''}
+                </span>
+              )}
+              {dbStatus === 'idle' && <span>—</span>}
+            </div>
             <a
               href={MAIN_SITE_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="block w-full py-4 rounded-xl bg-slate-800 text-white text-center font-medium hover:bg-slate-900 transition-colors"
+              className="text-slate-500 hover:text-slate-700 text-sm"
             >
-              去看看 →
+              Weavelink 主站
             </a>
+            <span className="text-slate-300 mx-2">·</span>
+            <span className="text-slate-400 text-sm">官网介绍页</span>
           </div>
-        </div>
-
-        <p className="text-slate-400 text-xs text-center">
-          前往主站使用云盘、分享与论坛等功能
-        </p>
-      </div>
+        </footer>
+      </main>
     </div>
   )
 }
