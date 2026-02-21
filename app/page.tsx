@@ -38,11 +38,15 @@ const navItems = [
   { id: 'cta', label: '前往主站' },
 ]
 
-// 顶部/底部广告位：循环展示用占位（可替换为 AdSense 等，两个位置都要放）
-const AD_SLIDES = [
-  { id: 1, label: '广告位 1' },
-  { id: 2, label: '广告位 2' },
-  { id: 3, label: '广告位 3' },
+// 顶部广告位：7 个，与底部不重复
+const AD_TOP_SLIDES = [
+  { id: 1, label: '广告位 1' }, { id: 2, label: '广告位 2' }, { id: 3, label: '广告位 3' },
+  { id: 4, label: '广告位 4' }, { id: 5, label: '广告位 5' }, { id: 6, label: '广告位 6' }, { id: 7, label: '广告位 7' },
+]
+// 底部广告位：7 个，与顶部不重复
+const AD_BOTTOM_SLIDES = [
+  { id: 8, label: '广告位 8' }, { id: 9, label: '广告位 9' }, { id: 10, label: '广告位 10' },
+  { id: 11, label: '广告位 11' }, { id: 12, label: '广告位 12' }, { id: 13, label: '广告位 13' }, { id: 14, label: '广告位 14' },
 ]
 
 // 招牌文章：节选自 aaa.txt（长月烬明：烬揽星河 第1章）
@@ -182,11 +186,11 @@ export default function HomePage() {
   }, [])
 
   useEffect(() => {
-    const t = setInterval(() => setTopAdIndex((i) => (i + 1) % AD_SLIDES.length), 5000)
+    const t = setInterval(() => setTopAdIndex((i) => (i + 1) % AD_TOP_SLIDES.length), 5000)
     return () => clearInterval(t)
   }, [])
   useEffect(() => {
-    const t = setInterval(() => setBottomAdIndex((i) => (i + 1) % AD_SLIDES.length), 5000)
+    const t = setInterval(() => setBottomAdIndex((i) => (i + 1) % AD_BOTTOM_SLIDES.length), 5000)
     return () => clearInterval(t)
   }, [])
 
@@ -309,7 +313,7 @@ export default function HomePage() {
 
         {/* 顶部循环广告位 */}
         <section className="relative z-10 h-20 md:h-24 bg-slate-100/80 backdrop-blur border-b border-slate-200 overflow-hidden" aria-label="广告">
-          {AD_SLIDES.map((slide, i) => (
+          {AD_TOP_SLIDES.map((slide, i) => (
             <div
               key={slide.id}
               className="absolute inset-0 flex items-center justify-center transition-opacity duration-500"
@@ -509,7 +513,7 @@ export default function HomePage() {
 
         {/* 底部循环广告位 */}
         <section className="relative z-10 h-20 md:h-24 bg-slate-100/80 backdrop-blur border-t border-slate-200 overflow-hidden" aria-label="广告">
-          {AD_SLIDES.map((slide, i) => (
+          {AD_BOTTOM_SLIDES.map((slide, i) => (
             <div
               key={slide.id}
               className="absolute inset-0 flex items-center justify-center transition-opacity duration-500"
