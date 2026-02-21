@@ -127,6 +127,8 @@ export default function HomePage() {
   const [articleSwipeX, setArticleSwipeX] = useState(0)
   const [articleDragging, setArticleDragging] = useState(false)
   const articleSwipeStart = useRef({ x: 0, index: 0 })
+  const articleSwipeCurrent = useRef(0)
+  const articleRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
     const ids = ['intro', 'tech', 'features', 'browse', 'article', 'cta']
@@ -234,7 +236,7 @@ export default function HomePage() {
     if (!carouselDragging) return
     const dx = e.clientX - pointerStartRef.current.x
     if (Math.abs(dx) > 4) didDragRef.current = true
-    const degDelta = -dx * 0.32
+    const degDelta = -dx * 0.52
     setCarouselDragDeg(degDelta)
     lastMoveRef.current = { x: e.clientX, t: Date.now() }
   }, [carouselDragging])
@@ -270,25 +272,28 @@ export default function HomePage() {
   }, [])
 
   const onArticlePointerDown = useCallback((e: React.PointerEvent) => {
-    (e.target as HTMLElement).setPointerCapture?.(e.pointerId)
+    const el = articleRef.current
+    if (el) el.setPointerCapture(e.pointerId)
     setArticleDragging(true)
     articleSwipeStart.current = { x: e.clientX, index: activeDocIndex }
+    articleSwipeCurrent.current = 0
     setArticleSwipeX(0)
   }, [activeDocIndex])
 
   const onArticlePointerMove = useCallback((e: React.PointerEvent) => {
     const dx = e.clientX - articleSwipeStart.current.x
+    articleSwipeCurrent.current = dx
     setArticleSwipeX(dx)
   }, [])
 
   const onArticlePointerUp = useCallback(() => {
+    const dx = articleSwipeCurrent.current
     setArticleDragging(false)
-    const dx = articleSwipeX
-    const threshold = 50
+    const threshold = 36
     if (dx > threshold) goPrevDoc()
     else if (dx < -threshold) goNextDoc()
     setArticleSwipeX(0)
-  }, [articleSwipeX, goPrevDoc, goNextDoc])
+  }, [goPrevDoc, goNextDoc])
 
   return (
     <div className="min-h-screen flex bg-slate-50">
@@ -511,7 +516,8 @@ export default function HomePage() {
             <h2 className="text-xl font-semibold text-slate-800 mb-4">招牌文章</h2>
             <p className="text-slate-500 text-xs mb-3">左右滑动文章区域可切换文档</p>
             <article
-              className="bg-white/90 backdrop-blur rounded-2xl border border-slate-200/80 p-6 md:p-8 shadow-sm overflow-hidden touch-pan-y select-none"
+              ref={articleRef}
+              className="bg-white/90 backdrop-blur rounded-2xl border border-slate-200/80 p-6 md:p-8 shadow-sm overflow-hidden select-none cursor-grab active:cursor-grabbing"
               onPointerDown={onArticlePointerDown}
               onPointerMove={onArticlePointerMove}
               onPointerUp={onArticlePointerUp}
@@ -519,6 +525,7 @@ export default function HomePage() {
               style={{
                 transform: `translateX(${articleSwipeX}px)`,
                 transition: articleDragging ? 'none' : 'transform 0.2s ease-out',
+                touchAction: 'pan-y',
               }}
             >
               {(() => {
