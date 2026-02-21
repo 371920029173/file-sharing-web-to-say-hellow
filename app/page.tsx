@@ -33,6 +33,7 @@ const navItems = [
   { id: 'intro', label: '简介' },
   { id: 'tech', label: '技术栈' },
   { id: 'features', label: '平台特色' },
+  { id: 'browse', label: '选择浏览' },
   { id: 'article', label: '招牌文章' },
   { id: 'cta', label: '前往主站' },
 ]
@@ -71,6 +72,40 @@ const ARTICLE = {
   ],
 }
 
+// 节选自 bbb.txt：乡村振兴与农村电商
+const ARTICLE_BBB = {
+  title: '乡村振兴战略下农村电商发展模式创新与路径优化研究',
+  paragraphs: [
+    '乡村振兴战略是新时代解决 "三农" 问题的核心举措，而农村电商作为数字经济与乡村经济深度融合的重要载体，已成为激活农村产业活力、拓宽农产品流通渠道、增加农民收入的关键引擎。',
+    '本文基于产业融合理论、价值链理论与可持续发展理论，采用文献研究法、实地调研法、案例分析法与比较研究法，系统梳理乡村振兴战略下农村电商的发展内涵与政策背景，深入分析我国农村电商的发展现状、现存模式与面临的瓶颈。',
+    '构建 "产业融合型、区域协同型、科技赋能型、生态循环型" 四大创新发展模式，并从基础设施建设、主体培育、品牌打造、政策支持等方面提出针对性优化路径，为推动农村电商高质量发展、助力乡村全面振兴提供理论参考与实践指导。',
+    '关键词：乡村振兴；农村电商；发展模式；创新路径；产业融合。',
+  ],
+}
+
+// 节选自 ccc.txt：人工智能与中小企业数字化
+const ARTICLE_CCC = {
+  title: '人工智能在中小企业数字化转型中的应用路径与实践策略',
+  paragraphs: [
+    '在数字经济加速渗透的背景下，中小企业数字化转型已成为提升核心竞争力的必然选择，但资金短缺、技术储备不足、人才匮乏等问题制约了转型进程。',
+    '人工智能作为新一代信息技术的核心，为中小企业突破转型瓶颈提供了全新解决方案。本文基于中小企业数字化转型的现实痛点，系统分析人工智能技术的适配性应用场景。',
+    '构建 "需求诊断 - 技术选型 - 分步落地 - 迭代优化" 的全流程应用路径，并结合典型案例总结可复制的实践策略，同时预判应用过程中的潜在风险与应对方案。',
+    '关键词：人工智能；中小企业；数字化转型；应用路径；实践策略。',
+  ],
+}
+
+const DOC_OPTIONS = [
+  { id: 'aaa', label: '长月烬明', short: '烬揽星河' },
+  { id: 'bbb', label: '农村电商', short: '乡村振兴' },
+  { id: 'ccc', label: '中小企业', short: 'AI 转型' },
+] as const
+
+const ARTICLES_MAP = { aaa: ARTICLE, bbb: ARTICLE_BBB, ccc: ARTICLE_CCC } as const
+
+const JAR_COUNT = DOC_OPTIONS.length
+const ANGLE_PER_JAR = 360 / JAR_COUNT
+const WHEEL_RADIUS = 160
+
 export default function HomePage() {
   const [username, setUsername] = useState('')
   const [message, setMessage] = useState<string | null>(null)
@@ -80,7 +115,41 @@ export default function HomePage() {
   const [topAdIndex, setTopAdIndex] = useState(0)
   const [bottomAdIndex, setBottomAdIndex] = useState(0)
   const [sideNavOpen, setSideNavOpen] = useState(false)
+  const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set(['intro']))
+  const [activeDocIndex, setActiveDocIndex] = useState(0)
+  const [carouselDragDeg, setCarouselDragDeg] = useState(0)
+  const [carouselDragging, setCarouselDragging] = useState(false)
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({})
+  const pointerStartRef = useRef({ x: 0, deg: 0 })
+  const lastMoveRef = useRef({ x: 0, t: 0 })
+  const didDragRef = useRef(false)
+  const wheelRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const ids = ['intro', 'tech', 'features', 'browse', 'article', 'cta']
+    const observer = new IntersectionObserver(
+      (entries) => {
+        setVisibleSections((prev) => {
+          const next = new Set(prev)
+          entries.forEach((e) => {
+            if (e.isIntersecting && e.target.id) next.add(e.target.id)
+          })
+          return next
+        })
+      },
+      { rootMargin: '-8% 0px -12% 0px', threshold: 0 }
+    )
+    const tim = setTimeout(() => {
+      ids.forEach((id) => {
+        const el = document.getElementById(id)
+        if (el) observer.observe(el)
+      })
+    }, 100)
+    return () => {
+      clearTimeout(tim)
+      observer.disconnect()
+    }
+  }, [])
 
   useEffect(() => {
     setDbStatus('checking')
@@ -133,6 +202,46 @@ export default function HomePage() {
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
+  const totalCarouselDeg = activeDocIndex * ANGLE_PER_JAR + carouselDragDeg
+
+  const onCarouselPointerDown = useCallback((e: React.PointerEvent) => {
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId)
+    setCarouselDragging(true)
+    didDragRef.current = false
+    pointerStartRef.current = { x: e.clientX, deg: activeDocIndex * ANGLE_PER_JAR + carouselDragDeg }
+    lastMoveRef.current = { x: e.clientX, t: Date.now() }
+  }, [activeDocIndex, carouselDragDeg])
+
+  const onCarouselPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!carouselDragging) return
+    const dx = e.clientX - pointerStartRef.current.x
+    if (Math.abs(dx) > 4) didDragRef.current = true
+    const degDelta = dx * 0.55
+    setCarouselDragDeg(degDelta)
+    lastMoveRef.current = { x: e.clientX, t: Date.now() }
+  }, [carouselDragging])
+
+  const onCarouselPointerUp = useCallback(() => {
+    if (!carouselDragging) return
+    setCarouselDragging(false)
+    const total = activeDocIndex * ANGLE_PER_JAR + carouselDragDeg
+    const dt = Math.max(1, Date.now() - lastMoveRef.current.t)
+    const velocity = (lastMoveRef.current.x - pointerStartRef.current.x) / dt
+    const velocityKick = velocity * 10
+    const targetTotal = total + velocityKick
+    let targetIndex = Math.round(targetTotal / ANGLE_PER_JAR)
+    targetIndex = ((targetIndex % JAR_COUNT) + JAR_COUNT) % JAR_COUNT
+    setActiveDocIndex(targetIndex)
+    setCarouselDragDeg(0)
+  }, [carouselDragging, activeDocIndex, carouselDragDeg])
+
+  const selectDocIndex = useCallback((index: number) => {
+    if (didDragRef.current) return
+    setActiveDocIndex(index)
+    setCarouselDragDeg(0)
+    scrollTo('article')
+  }, [])
+
   return (
     <div className="min-h-screen flex bg-slate-50">
       {/* 侧边导航 - Dropbox 风格 */}
@@ -161,7 +270,7 @@ export default function HomePage() {
                 key={item.id}
                 type="button"
                 onClick={() => scrollTo(item.id)}
-                className="text-left px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                className="text-left px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all duration-200 hover:translate-x-0.5 hover:scale-[1.02]"
               >
                 {item.label}
               </button>
@@ -189,9 +298,16 @@ export default function HomePage() {
         目录
       </button>
 
-      <main className="flex-1 md:ml-56 min-h-screen">
+      <main className="flex-1 md:ml-56 min-h-screen relative overflow-hidden">
+        {/* Stripe 风格：背景渐变光斑 */}
+        <div className="pointer-events-none fixed inset-0 z-0" aria-hidden>
+          <div className="absolute top-[-20%] right-[-10%] w-[80vw] max-w-[600px] h-[60vh] rounded-full bg-gradient-to-br from-blue-200/40 via-indigo-100/30 to-transparent animate-blob-float" />
+          <div className="absolute bottom-[-10%] left-[-15%] w-[70vw] max-w-[500px] h-[50vh] rounded-full bg-gradient-to-tr from-violet-200/35 via-slate-100/25 to-transparent animate-blob-float" style={{ animationDelay: '-5s', animationDuration: '25s' }} />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-[800px] h-[80vh] rounded-full bg-gradient-to-r from-sky-100/20 to-indigo-100/15 animate-glow-pulse" />
+        </div>
+
         {/* 顶部循环广告位 */}
-        <section className="relative h-20 md:h-24 bg-slate-100 border-b border-slate-200 overflow-hidden" aria-label="广告">
+        <section className="relative z-10 h-20 md:h-24 bg-slate-100/80 backdrop-blur border-b border-slate-200 overflow-hidden" aria-label="广告">
           {AD_SLIDES.map((slide, i) => (
             <div
               key={slide.id}
@@ -208,13 +324,12 @@ export default function HomePage() {
           ))}
         </section>
 
-        <div className="max-w-2xl mx-auto px-6 py-10 md:py-14">
-          {/* Hero - Stripe 风格渐变标题 */}
+        <div className="relative z-10 max-w-2xl mx-auto px-6 py-10 md:py-14">
+          {/* Hero - Stripe 风格渐变标题 + 入场动画 */}
           <section
             id="intro"
             ref={(el) => { sectionRefs.current.intro = el }}
-            className="mb-16 animate-fade-in-up opacity-0"
-            style={{ animationFillMode: 'forwards' }}
+            className={`mb-16 section-reveal ${visibleSections.has('intro') ? 'is-visible' : ''}`}
           >
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-slate-800 mb-3 leading-tight">
               资源与你同频，
@@ -229,7 +344,7 @@ export default function HomePage() {
           </section>
 
           {/* 简介 */}
-          <section className="mb-16">
+          <section className={`mb-16 section-reveal ${visibleSections.has('intro') ? 'is-visible' : ''}`} style={{ transitionDelay: '80ms' }}>
             <h2 className="text-xl font-semibold text-slate-800 mb-4">简介</h2>
             <p className="text-slate-700 leading-relaxed mb-4">
               我们提供安全、便捷的文件存储与分享，支持云盘、公开分享、私信传输与论坛社区。
@@ -244,33 +359,33 @@ export default function HomePage() {
           <section
             id="tech"
             ref={(el) => { sectionRefs.current.tech = el }}
-            className="mb-16 scroll-mt-6"
+            className={`mb-16 scroll-mt-6 section-reveal ${visibleSections.has('tech') ? 'is-visible' : ''}`}
           >
             <h2 className="text-xl font-semibold text-slate-800 mb-4">技术栈</h2>
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm">
+            <div className="bg-white/90 backdrop-blur rounded-2xl border border-slate-200/80 p-6 shadow-sm card-hover">
               <ul className="space-y-3 text-slate-700 text-sm">
                 <li><strong>前端</strong>：Next.js 15、React 18、TypeScript、Tailwind CSS</li>
                 <li><strong>后端 / 数据</strong>：Supabase（PostgreSQL、Auth、Row Level Security）</li>
                 <li><strong>部署</strong>：Cloudflare Pages（@cloudflare/next-on-pages）</li>
-                <li><strong>本介绍页</strong>：与主站共用同一 Supabase 项目；设备指纹限流，每日有效同步次数限制。</li>
               </ul>
             </div>
           </section>
 
-          {/* 平台特色 */}
+          {/* 平台特色 - Framer 风格卡片悬停 + 交错入场 */}
           <section
             id="features"
             ref={(el) => { sectionRefs.current.features = el }}
-            className="mb-16 scroll-mt-6"
+            className={`mb-16 scroll-mt-6 section-reveal ${visibleSections.has('features') ? 'is-visible' : ''}`}
           >
             <h2 className="text-xl font-semibold text-slate-800 mb-4">平台特色</h2>
             <div className="grid grid-cols-2 gap-3">
               {features.map((f, i) => (
                 <div
                   key={i}
-                  className="bg-white rounded-xl border border-slate-200/80 px-4 py-4 text-center shadow-sm hover:shadow-md transition-shadow"
+                  className={`card-hover bg-white/90 backdrop-blur rounded-xl border border-slate-200/80 px-4 py-4 text-center shadow-sm section-reveal ${visibleSections.has('features') ? 'is-visible' : ''}`}
+                  style={{ transitionDelay: `${i * 60}ms` }}
                 >
-                  <span className="text-2xl block mb-1" aria-hidden>{f.icon}</span>
+                  <span className="text-2xl block mb-1 transition-transform duration-200 hover:scale-110 inline-block" aria-hidden>{f.icon}</span>
                   <div className="font-medium text-slate-800 text-sm">{f.title}</div>
                   <div className="text-slate-500 text-xs mt-0.5">{f.desc}</div>
                 </div>
@@ -278,20 +393,88 @@ export default function HomePage() {
             </div>
           </section>
 
-          {/* 招牌文章 */}
+          {/* 选择浏览：旋转调料罐式 3D 轮播，近大远小 + 备选模糊 */}
+          <section
+            id="browse"
+            className={`mb-16 scroll-mt-6 section-reveal ${visibleSections.has('features') ? 'is-visible' : ''}`}
+          >
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">选择浏览</h2>
+            <p className="text-slate-600 text-sm mb-6">左右滑动或点击选择要阅读的文档</p>
+            <div
+              className="spice-rack-stage relative mx-auto h-[220px] flex items-center justify-center overflow-hidden"
+              onPointerDown={onCarouselPointerDown}
+              onPointerMove={onCarouselPointerMove}
+              onPointerUp={onCarouselPointerUp}
+              onPointerLeave={onCarouselPointerUp}
+            >
+              <div
+                ref={wheelRef}
+                className={`spice-rack-wheel absolute w-full h-full ${carouselDragging ? 'is-dragging' : ''}`}
+                style={{
+                  transform: `rotateY(${-totalCarouselDeg}deg)`,
+                }}
+              >
+                {DOC_OPTIONS.map((doc, i) => {
+                  const angleFromCenter = (i - activeDocIndex) * ANGLE_PER_JAR - carouselDragDeg
+                  const normalized = ((angleFromCenter + 180) % 360) - 180
+                  const focus = Math.max(0, 1 - Math.abs(normalized) / 90)
+                  const scale = 0.72 + 0.28 * focus
+                  const opacity = 0.5 + 0.5 * focus
+                  const blur = (1 - focus) * 6
+                  const zIndex = Math.round(focus * 10)
+                  return (
+                    <div
+                      key={doc.id}
+                      className="spice-rack-jar absolute left-1/2 top-1/2 w-[140px] h-[160px] -ml-[70px] -mt-[80px] cursor-pointer select-none flex flex-col items-center justify-center rounded-2xl border-2 border-slate-200/90 bg-white/95 shadow-lg"
+                      style={{
+                        transform: `rotateY(${i * ANGLE_PER_JAR}deg) translateZ(${WHEEL_RADIUS}px) scale(${scale})`,
+                        opacity,
+                        filter: blur > 0.5 ? `blur(${blur}px)` : 'none',
+                        boxShadow: focus > 0.6
+                          ? '0 25px 50px -12px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.04)'
+                          : '0 10px 24px -8px rgba(0,0,0,0.12)',
+                        zIndex,
+                      }}
+                      onClick={() => selectDocIndex(i)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => e.key === 'Enter' && selectDocIndex(i)}
+                      aria-label={`选择 ${doc.label}`}
+                    >
+                      <span className="text-2xl mb-1" aria-hidden>
+                        {doc.id === 'aaa' ? '📜' : doc.id === 'bbb' ? '🌾' : '🤖'}
+                      </span>
+                      <span className="font-semibold text-slate-800 text-sm text-center px-1">{doc.label}</span>
+                      <span className="text-slate-500 text-xs mt-0.5">{doc.short}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </section>
+
+          {/* 招牌文章：根据上方选择展示对应文档 */}
           <section
             id="article"
             ref={(el) => { sectionRefs.current.article = el }}
-            className="mb-16 scroll-mt-6"
+            className={`mb-16 scroll-mt-6 section-reveal ${visibleSections.has('article') ? 'is-visible' : ''}`}
           >
             <h2 className="text-xl font-semibold text-slate-800 mb-4">招牌文章</h2>
-            <article className="bg-white rounded-2xl border border-slate-200/80 p-6 md:p-8 shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-800 mb-4">{ARTICLE.title}</h3>
-              <div className="space-y-4 text-slate-700 leading-relaxed text-sm md:text-base">
-                {ARTICLE.paragraphs.map((p, i) => (
-                  <p key={i}>{p}</p>
-                ))}
-              </div>
+            <article className="card-hover bg-white/90 backdrop-blur rounded-2xl border border-slate-200/80 p-6 md:p-8 shadow-sm">
+              {(() => {
+                const docId = DOC_OPTIONS[activeDocIndex].id
+                const art = ARTICLES_MAP[docId]
+                return (
+                  <>
+                    <h3 className="text-lg font-semibold text-slate-800 mb-4">{art.title}</h3>
+                    <div className="space-y-4 text-slate-700 leading-relaxed text-sm md:text-base">
+                      {art.paragraphs.map((p, i) => (
+                        <p key={i}>{p}</p>
+                      ))}
+                    </div>
+                  </>
+                )
+              })()}
             </article>
           </section>
 
@@ -299,10 +482,10 @@ export default function HomePage() {
           <section
             id="cta"
             ref={(el) => { sectionRefs.current.cta = el }}
-            className="mb-16 scroll-mt-6"
+            className={`mb-16 scroll-mt-6 section-reveal ${visibleSections.has('cta') ? 'is-visible' : ''}`}
           >
             <h2 className="text-xl font-semibold text-slate-800 mb-4">前往主站</h2>
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-6 md:p-8 shadow-sm">
+            <div className="card-hover bg-white/90 backdrop-blur rounded-2xl border border-slate-200/80 p-6 md:p-8 shadow-sm">
               <div className="flex flex-col sm:flex-row gap-3 mb-6">
                 <input
                   type="text"
@@ -336,7 +519,7 @@ export default function HomePage() {
         </div>
 
         {/* 底部循环广告位 */}
-        <section className="relative h-20 md:h-24 bg-slate-100 border-t border-slate-200 overflow-hidden" aria-label="广告">
+        <section className="relative z-10 h-20 md:h-24 bg-slate-100/80 backdrop-blur border-t border-slate-200 overflow-hidden" aria-label="广告">
           {AD_SLIDES.map((slide, i) => (
             <div
               key={slide.id}
