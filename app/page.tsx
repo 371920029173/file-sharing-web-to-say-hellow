@@ -124,6 +124,9 @@ export default function HomePage() {
   const lastMoveRef = useRef({ x: 0, t: 0 })
   const didDragRef = useRef(false)
   const wheelRef = useRef<HTMLDivElement>(null)
+  const [articleSwipeX, setArticleSwipeX] = useState(0)
+  const [articleDragging, setArticleDragging] = useState(false)
+  const articleSwipeStart = useRef({ x: 0, index: 0 })
 
   useEffect(() => {
     const ids = ['intro', 'tech', 'features', 'browse', 'article', 'cta']
@@ -216,7 +219,7 @@ export default function HomePage() {
     if (!carouselDragging) return
     const dx = e.clientX - pointerStartRef.current.x
     if (Math.abs(dx) > 4) didDragRef.current = true
-    const degDelta = dx * 0.55
+    const degDelta = -dx * 0.32
     setCarouselDragDeg(degDelta)
     lastMoveRef.current = { x: e.clientX, t: Date.now() }
   }, [carouselDragging])
@@ -227,7 +230,7 @@ export default function HomePage() {
     const total = activeDocIndex * ANGLE_PER_JAR + carouselDragDeg
     const dt = Math.max(1, Date.now() - lastMoveRef.current.t)
     const velocity = (lastMoveRef.current.x - pointerStartRef.current.x) / dt
-    const velocityKick = velocity * 10
+    const velocityKick = -velocity * 3.5
     const targetTotal = total + velocityKick
     let targetIndex = Math.round(targetTotal / ANGLE_PER_JAR)
     targetIndex = ((targetIndex % JAR_COUNT) + JAR_COUNT) % JAR_COUNT
@@ -241,6 +244,36 @@ export default function HomePage() {
     setCarouselDragDeg(0)
     scrollTo('article')
   }, [])
+
+  const goPrevDoc = useCallback(() => {
+    setActiveDocIndex((i) => (i - 1 + JAR_COUNT) % JAR_COUNT)
+    setCarouselDragDeg(0)
+  }, [])
+  const goNextDoc = useCallback(() => {
+    setActiveDocIndex((i) => (i + 1) % JAR_COUNT)
+    setCarouselDragDeg(0)
+  }, [])
+
+  const onArticlePointerDown = useCallback((e: React.PointerEvent) => {
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId)
+    setArticleDragging(true)
+    articleSwipeStart.current = { x: e.clientX, index: activeDocIndex }
+    setArticleSwipeX(0)
+  }, [activeDocIndex])
+
+  const onArticlePointerMove = useCallback((e: React.PointerEvent) => {
+    const dx = e.clientX - articleSwipeStart.current.x
+    setArticleSwipeX(dx)
+  }, [])
+
+  const onArticlePointerUp = useCallback(() => {
+    setArticleDragging(false)
+    const dx = articleSwipeX
+    const threshold = 50
+    if (dx > threshold) goPrevDoc()
+    else if (dx < -threshold) goNextDoc()
+    setArticleSwipeX(0)
+  }, [articleSwipeX, goPrevDoc, goNextDoc])
 
   return (
     <div className="min-h-screen flex bg-slate-50">
@@ -417,10 +450,11 @@ export default function HomePage() {
                 {DOC_OPTIONS.map((doc, i) => {
                   const angleFromCenter = (i - activeDocIndex) * ANGLE_PER_JAR - carouselDragDeg
                   const normalized = ((angleFromCenter + 180) % 360) - 180
-                  const focus = Math.max(0, 1 - Math.abs(normalized) / 90)
+                  const absNorm = Math.abs(normalized)
+                  const focus = 1 / (1 + Math.pow(absNorm / 55, 1.8))
                   const scale = 0.72 + 0.28 * focus
                   const opacity = 0.5 + 0.5 * focus
-                  const blur = (1 - focus) * 6
+                  const blur = (1 - focus) * 5
                   const zIndex = Math.round(focus * 10)
                   return (
                     <div
@@ -453,14 +487,25 @@ export default function HomePage() {
             </div>
           </section>
 
-          {/* 招牌文章：根据上方选择展示对应文档 */}
+          {/* 招牌文章：可直接左右滑动切换文档，与上方选择同步 */}
           <section
             id="article"
             ref={(el) => { sectionRefs.current.article = el }}
             className={`mb-16 scroll-mt-6 section-reveal ${visibleSections.has('article') ? 'is-visible' : ''}`}
           >
             <h2 className="text-xl font-semibold text-slate-800 mb-4">招牌文章</h2>
-            <article className="card-hover bg-white/90 backdrop-blur rounded-2xl border border-slate-200/80 p-6 md:p-8 shadow-sm">
+            <p className="text-slate-500 text-xs mb-3">左右滑动文章区域可切换文档</p>
+            <article
+              className="bg-white/90 backdrop-blur rounded-2xl border border-slate-200/80 p-6 md:p-8 shadow-sm overflow-hidden touch-pan-y select-none"
+              onPointerDown={onArticlePointerDown}
+              onPointerMove={onArticlePointerMove}
+              onPointerUp={onArticlePointerUp}
+              onPointerLeave={onArticlePointerUp}
+              style={{
+                transform: `translateX(${articleSwipeX}px)`,
+                transition: articleDragging ? 'none' : 'transform 0.2s ease-out',
+              }}
+            >
               {(() => {
                 const docId = DOC_OPTIONS[activeDocIndex].id
                 const art = ARTICLES_MAP[docId]
