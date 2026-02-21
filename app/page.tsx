@@ -130,14 +130,28 @@ export default function HomePage() {
 
   useEffect(() => {
     const ids = ['intro', 'tech', 'features', 'browse', 'article', 'cta']
+    let rafId = 0
+    let pending: Set<string> | null = null
     const observer = new IntersectionObserver(
       (entries) => {
-        setVisibleSections((prev) => {
-          const next = new Set(prev)
-          entries.forEach((e) => {
-            if (e.isIntersecting && e.target.id) next.add(e.target.id)
+        const toAdd = new Set<string>()
+        entries.forEach((e) => {
+          if (e.isIntersecting && e.target.id) toAdd.add(e.target.id)
+        })
+        if (toAdd.size === 0) return
+        pending = toAdd
+        if (rafId) return
+        rafId = requestAnimationFrame(() => {
+          rafId = 0
+          const next = pending
+          pending = null
+          if (!next) return
+          setVisibleSections((prev) => {
+            const merged = new Set(prev)
+            next.forEach((id) => merged.add(id))
+            if (merged.size === prev.size) return prev
+            return merged
           })
-          return next
         })
       },
       { rootMargin: '-8% 0px -12% 0px', threshold: 0 }
@@ -150,6 +164,7 @@ export default function HomePage() {
     }, 100)
     return () => {
       clearTimeout(tim)
+      if (rafId) cancelAnimationFrame(rafId)
       observer.disconnect()
     }
   }, [])
@@ -303,7 +318,7 @@ export default function HomePage() {
                 key={item.id}
                 type="button"
                 onClick={() => scrollTo(item.id)}
-                className="text-left px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all duration-200 hover:translate-x-0.5 hover:scale-[1.02]"
+                className="text-left px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors duration-200"
               >
                 {item.label}
               </button>
