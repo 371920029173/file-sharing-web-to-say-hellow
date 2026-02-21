@@ -36,22 +36,3 @@ body {
   box-shadow: 0 20px 40px -12px rgb(0 0 0 / 0.08), 0 0 0 1px rgb(0 0 0 / 0.02);
   border-color: rgb(148 163 184 / 0.4);
 }
-
-/* 旋转调料罐 3D 轮播：隔离重绘，避免悬停时整页抽搐 */
-.spice-rack-stage {
-  perspective: 1200px;
-  touch-action: pan-y pinch-zoom;
-  contain: layout style paint;
-}
-.spice-rack-wheel {
-  transform-style: preserve-3d;
-  will-change: transform;
-  transition: transform 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-.spice-rack-wheel.is-dragging {
-  transition: none;
-}
-.spice-rack-jar {
-  backface-visibility: hidden;
-  transition: filter 0.4s ease-out, opacity 0.35s ease-out, box-shadow 0.35s ease-out, transform 0.35s ease-out;
-}

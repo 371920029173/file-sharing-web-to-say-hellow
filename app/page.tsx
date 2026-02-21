@@ -102,10 +102,6 @@ const DOC_OPTIONS = [
 
 const ARTICLES_MAP = { aaa: ARTICLE, bbb: ARTICLE_BBB, ccc: ARTICLE_CCC } as const
 
-const JAR_COUNT = DOC_OPTIONS.length
-const ANGLE_PER_JAR = 360 / JAR_COUNT
-const WHEEL_RADIUS = 160
-
 export default function HomePage() {
   const [username, setUsername] = useState('')
   const [message, setMessage] = useState<string | null>(null)
@@ -117,18 +113,15 @@ export default function HomePage() {
   const [sideNavOpen, setSideNavOpen] = useState(false)
   const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set(['intro']))
   const [activeDocIndex, setActiveDocIndex] = useState(0)
-  const [carouselDragDeg, setCarouselDragDeg] = useState(0)
-  const [carouselDragging, setCarouselDragging] = useState(false)
+  const [slideOffset, setSlideOffset] = useState(0)
+  const [slideDragging, setSlideDragging] = useState(false)
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({})
-  const pointerStartRef = useRef({ x: 0, deg: 0 })
-  const lastMoveRef = useRef({ x: 0, t: 0 })
-  const didDragRef = useRef(false)
-  const wheelRef = useRef<HTMLDivElement>(null)
-  const [articleSwipeX, setArticleSwipeX] = useState(0)
-  const [articleDragging, setArticleDragging] = useState(false)
-  const articleSwipeStart = useRef({ x: 0, index: 0 })
-  const articleSwipeCurrent = useRef(0)
-  const articleRef = useRef<HTMLElement>(null)
+  const slideStart = useRef({ x: 0, offset: 0 })
+
+  const CARD_WIDTH = 152
+  const CARD_GAP = 12
+  const STEP = CARD_WIDTH + CARD_GAP
+  const SNAP_DURATION = 300
 
   useEffect(() => {
     const ids = ['intro', 'tech', 'features', 'browse', 'article', 'cta']
@@ -222,78 +215,33 @@ export default function HomePage() {
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  const totalCarouselDeg = activeDocIndex * ANGLE_PER_JAR + carouselDragDeg
-
-  const onCarouselPointerDown = useCallback((e: React.PointerEvent) => {
-    (e.target as HTMLElement).setPointerCapture?.(e.pointerId)
-    setCarouselDragging(true)
-    didDragRef.current = false
-    pointerStartRef.current = { x: e.clientX, deg: activeDocIndex * ANGLE_PER_JAR + carouselDragDeg }
-    lastMoveRef.current = { x: e.clientX, t: Date.now() }
-  }, [activeDocIndex, carouselDragDeg])
-
-  const onCarouselPointerMove = useCallback((e: React.PointerEvent) => {
-    if (!carouselDragging) return
-    const dx = e.clientX - pointerStartRef.current.x
-    if (Math.abs(dx) > 4) didDragRef.current = true
-    const degDelta = -dx * 0.52
-    setCarouselDragDeg(degDelta)
-    lastMoveRef.current = { x: e.clientX, t: Date.now() }
-  }, [carouselDragging])
-
-  const onCarouselPointerUp = useCallback(() => {
-    if (!carouselDragging) return
-    setCarouselDragging(false)
-    const total = activeDocIndex * ANGLE_PER_JAR + carouselDragDeg
-    const dt = Math.max(1, Date.now() - lastMoveRef.current.t)
-    const velocity = (lastMoveRef.current.x - pointerStartRef.current.x) / dt
-    const velocityKick = -velocity * 3.5
-    const targetTotal = total + velocityKick
-    let targetIndex = Math.round(targetTotal / ANGLE_PER_JAR)
-    targetIndex = ((targetIndex % JAR_COUNT) + JAR_COUNT) % JAR_COUNT
-    setActiveDocIndex(targetIndex)
-    setCarouselDragDeg(0)
-  }, [carouselDragging, activeDocIndex, carouselDragDeg])
-
-  const selectDocIndex = useCallback((index: number) => {
-    if (didDragRef.current) return
+  const selectDoc = useCallback((index: number) => {
     setActiveDocIndex(index)
-    setCarouselDragDeg(0)
+    setSlideOffset(0)
     scrollTo('article')
   }, [])
 
-  const goPrevDoc = useCallback(() => {
-    setActiveDocIndex((i) => (i - 1 + JAR_COUNT) % JAR_COUNT)
-    setCarouselDragDeg(0)
-  }, [])
-  const goNextDoc = useCallback(() => {
-    setActiveDocIndex((i) => (i + 1) % JAR_COUNT)
-    setCarouselDragDeg(0)
-  }, [])
+  const onSlidePointerDown = useCallback((e: React.PointerEvent) => {
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId)
+    setSlideDragging(true)
+    slideStart.current = { x: e.clientX, offset: slideOffset }
+  }, [slideOffset])
 
-  const onArticlePointerDown = useCallback((e: React.PointerEvent) => {
-    const el = articleRef.current
-    if (el) el.setPointerCapture(e.pointerId)
-    setArticleDragging(true)
-    articleSwipeStart.current = { x: e.clientX, index: activeDocIndex }
-    articleSwipeCurrent.current = 0
-    setArticleSwipeX(0)
-  }, [activeDocIndex])
+  const onSlidePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!slideDragging) return
+    const dx = e.clientX - slideStart.current.x
+    setSlideOffset(slideStart.current.offset + dx)
+  }, [slideDragging])
 
-  const onArticlePointerMove = useCallback((e: React.PointerEvent) => {
-    const dx = e.clientX - articleSwipeStart.current.x
-    articleSwipeCurrent.current = dx
-    setArticleSwipeX(dx)
-  }, [])
-
-  const onArticlePointerUp = useCallback(() => {
-    const dx = articleSwipeCurrent.current
-    setArticleDragging(false)
-    const threshold = 36
-    if (dx > threshold) goPrevDoc()
-    else if (dx < -threshold) goNextDoc()
-    setArticleSwipeX(0)
-  }, [goPrevDoc, goNextDoc])
+  const onSlidePointerUp = useCallback(() => {
+    if (!slideDragging) return
+    setSlideDragging(false)
+    const totalOffset = -activeDocIndex * STEP + slideOffset
+    const targetIndex = Math.round(-totalOffset / STEP)
+    const clamped = Math.max(0, Math.min(DOC_OPTIONS.length - 1, targetIndex))
+    setActiveDocIndex(clamped)
+    setSlideOffset(0)
+  }, [slideDragging, activeDocIndex, slideOffset])
 
   return (
     <div className="min-h-screen flex bg-slate-50">
@@ -446,87 +394,61 @@ export default function HomePage() {
             </div>
           </section>
 
-          {/* 选择浏览：旋转调料罐式 3D 轮播，近大远小 + 备选模糊 */}
+          {/* 选择浏览：水平滑动，带滑动动画 */}
           <section
             id="browse"
             className={`mb-16 scroll-mt-6 section-reveal ${visibleSections.has('features') ? 'is-visible' : ''}`}
           >
             <h2 className="text-xl font-semibold text-slate-800 mb-4">选择浏览</h2>
-            <p className="text-slate-600 text-sm mb-6">左右滑动或点击选择要阅读的文档</p>
+            <p className="text-slate-600 text-sm mb-4">左右滑动或点击要阅读的文档</p>
             <div
-              className="spice-rack-stage relative mx-auto h-[220px] flex items-center justify-center overflow-hidden"
-              onPointerDown={onCarouselPointerDown}
-              onPointerMove={onCarouselPointerMove}
-              onPointerUp={onCarouselPointerUp}
-              onPointerLeave={onCarouselPointerUp}
+              className="overflow-hidden touch-pan-y select-none"
+              onPointerDown={onSlidePointerDown}
+              onPointerMove={onSlidePointerMove}
+              onPointerUp={onSlidePointerUp}
+              onPointerLeave={onSlidePointerUp}
             >
               <div
-                ref={wheelRef}
-                className={`spice-rack-wheel absolute w-full h-full ${carouselDragging ? 'is-dragging' : ''}`}
+                className="flex gap-3"
                 style={{
-                  transform: `rotateY(${-totalCarouselDeg}deg)`,
+                  transform: `translateX(calc(50% - ${CARD_WIDTH / 2}px + ${-activeDocIndex * STEP + slideOffset}px))`,
+                  transition: slideDragging ? 'none' : `transform ${SNAP_DURATION}ms cubic-bezier(0.25, 0.46, 0.45, 0.94)`,
                 }}
               >
-                {DOC_OPTIONS.map((doc, i) => {
-                  const angleFromCenter = (i - activeDocIndex) * ANGLE_PER_JAR - carouselDragDeg
-                  const normalized = ((angleFromCenter + 180) % 360) - 180
-                  const absNorm = Math.abs(normalized)
-                  const focus = 1 / (1 + Math.pow(absNorm / 55, 1.8))
-                  const scale = 0.72 + 0.28 * focus
-                  const opacity = 0.5 + 0.5 * focus
-                  const blur = (1 - focus) * 5
-                  const zIndex = Math.round(focus * 10)
-                  return (
-                    <div
-                      key={doc.id}
-                      className="spice-rack-jar absolute left-1/2 top-1/2 w-[140px] h-[160px] -ml-[70px] -mt-[80px] cursor-pointer select-none flex flex-col items-center justify-center rounded-2xl border-2 border-slate-200/90 bg-white/95 shadow-lg"
-                      style={{
-                        transform: `rotateY(${i * ANGLE_PER_JAR}deg) translateZ(${WHEEL_RADIUS}px) scale(${scale})`,
-                        opacity,
-                        filter: blur > 0.5 ? `blur(${blur}px)` : 'none',
-                        boxShadow: focus > 0.6
-                          ? '0 25px 50px -12px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.04)'
-                          : '0 10px 24px -8px rgba(0,0,0,0.12)',
-                        zIndex,
-                      }}
-                      onClick={() => selectDocIndex(i)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => e.key === 'Enter' && selectDocIndex(i)}
-                      aria-label={`选择 ${doc.label}`}
-                    >
-                      <span className="text-2xl mb-1" aria-hidden>
-                        {doc.id === 'aaa' ? '📜' : doc.id === 'bbb' ? '🌾' : '🤖'}
-                      </span>
-                      <span className="font-semibold text-slate-800 text-sm text-center px-1">{doc.label}</span>
-                      <span className="text-slate-500 text-xs mt-0.5">{doc.short}</span>
-                    </div>
-                  )
-                })}
+                {DOC_OPTIONS.map((doc, i) => (
+                  <button
+                    key={doc.id}
+                    type="button"
+                    onClick={() => selectDoc(i)}
+                    className={`flex flex-col items-center justify-center rounded-xl border-2 flex-shrink-0 px-6 py-4 w-[140px] transition-colors ${
+                      activeDocIndex === i
+                        ? 'border-blue-500 bg-blue-50 text-blue-800 shadow-md'
+                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 text-slate-700'
+                    }`}
+                    style={{ width: CARD_WIDTH, minWidth: CARD_WIDTH }}
+                    aria-label={`选择 ${doc.label}`}
+                  >
+                    <span className="text-2xl mb-1" aria-hidden>
+                      {doc.id === 'aaa' ? '📜' : doc.id === 'bbb' ? '🌾' : '🤖'}
+                    </span>
+                    <span className="font-semibold text-sm">{doc.label}</span>
+                    <span className="text-xs opacity-80 mt-0.5">{doc.short}</span>
+                  </button>
+                ))}
               </div>
             </div>
           </section>
 
-          {/* 招牌文章：可直接左右滑动切换文档，与上方选择同步 */}
+          {/* 招牌文章：与上方选择同步，和卡片同款入场+悬停动画 */}
           <section
             id="article"
             ref={(el) => { sectionRefs.current.article = el }}
             className={`mb-16 scroll-mt-6 section-reveal ${visibleSections.has('article') ? 'is-visible' : ''}`}
           >
             <h2 className="text-xl font-semibold text-slate-800 mb-4">招牌文章</h2>
-            <p className="text-slate-500 text-xs mb-3">左右滑动文章区域可切换文档</p>
             <article
-              ref={articleRef}
-              className="bg-white/90 backdrop-blur rounded-2xl border border-slate-200/80 p-6 md:p-8 shadow-sm overflow-hidden select-none cursor-grab active:cursor-grabbing"
-              onPointerDown={onArticlePointerDown}
-              onPointerMove={onArticlePointerMove}
-              onPointerUp={onArticlePointerUp}
-              onPointerLeave={onArticlePointerUp}
-              style={{
-                transform: `translateX(${articleSwipeX}px)`,
-                transition: articleDragging ? 'none' : 'transform 0.2s ease-out',
-                touchAction: 'pan-y',
-              }}
+              className={`card-hover bg-white/90 backdrop-blur rounded-2xl border border-slate-200/80 p-6 md:p-8 shadow-sm section-reveal ${visibleSections.has('article') ? 'is-visible' : ''}`}
+              style={{ transitionDelay: '80ms' }}
             >
               {(() => {
                 const docId = DOC_OPTIONS[activeDocIndex].id
