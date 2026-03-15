@@ -389,6 +389,27 @@ export default function HomePage() {
             </div>
           </section>
 
+          {/* 应用与工具集合说明：warehous 站点 */}
+          <section
+            className={`mb-16 scroll-mt-6 section-reveal ${visibleSections.has('tech') ? 'is-visible' : ''}`}
+            style={{ transitionDelay: '80ms' }}
+          >
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">应用与工具集合</h2>
+            <p className="text-slate-700 leading-relaxed mb-3">
+              为了不把所有实验性功能都堆到主站，我们在 <span className="font-medium">warehous.pages.dev</span>{' '}
+              上整理了一批轻量的小工具和演示页面，可以理解为围绕 Weavelink 的「应用商场」或实验仓库。
+              这些页面通常体量较小，聚焦于某一个具体场景，方便单独迭代与测试。
+            </p>
+            <p className="text-slate-700 leading-relaxed mb-3">
+              典型的工具类型包括：文件相关的小工具（如示例性压缩/拆分流程演示、命名规则建议）、文本与格式化工具、
+              简单的计时与笔记类页面等。它们不要求用户一定登录主站账号，在浏览器中即可体验，适合当作辅助工具或灵感实验室。
+            </p>
+            <p className="text-slate-700 leading-relaxed">
+              应用集合站与主站、介绍页共享同一套设计语言与隐私原则：页面会尽量说明用途与数据范围，
+              涉及账号或存储的操作仍回到主站完成，避免让用户在多个域名之间重复登记敏感信息。
+            </p>
+          </section>
+
           {/* 平台特色 - Framer 风格卡片悬停 + 交错入场 */}
           <section
             id="features"
@@ -482,6 +503,38 @@ export default function HomePage() {
                 )
               })()}
             </article>
+          </section>
+
+          {/* 常见问题：介绍页、主站与应用集合的关系 */}
+          <section
+            className={`mb-16 scroll-mt-6 section-reveal ${visibleSections.has('article') ? 'is-visible' : ''}`}
+            style={{ transitionDelay: '120ms' }}
+          >
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">常见问题</h2>
+            <div className="bg-white/90 backdrop-blur rounded-2xl border border-slate-200/80 p-6 md:p-8 shadow-sm space-y-5 text-sm text-slate-700">
+              <div>
+                <h3 className="font-semibold text-slate-800 mb-1">Q：这个介绍页会单独收集账号或文件吗？</h3>
+                <p>
+                  A：不会。介绍页只在您自愿填写主站账号名并点击「确认」时，把账号名与设备指纹一并发送到同一套后端，
+                  用于按规则记录每日支持与奖励次数；文件上传、下载和管理都只在主站完成。
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-800 mb-1">Q：应用集合站上的小工具是否必须登录？</h3>
+                <p>
+                  A：多数工具不需要登录，它们更像是围绕主站场景设计的辅助页面或原型展示。
+                  若某个功能真正涉及文件持久化或账号操作，会清楚标明并跳转回主站执行。
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-800 mb-1">Q：我应该从哪里开始体验整套产品？</h3>
+                <p>
+                  A：如果您只是想快速了解平台，可以在本页浏览技术栈说明与三篇示例文章；
+                  若需要实际使用云盘与分享功能，请前往主站 weavelink.pages.dev 注册并登录；
+                  想尝试更多周边工具时，再访问 warehous.pages.dev 按需选择小工具使用即可。
+                </p>
+              </div>
+            </div>
           </section>
 
           {/* CTA：同步 + 去看看主站 */}
