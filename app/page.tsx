@@ -355,6 +355,19 @@ export default function HomePage() {
               我们提供安全、便捷的文件存储与分享，支持云盘、公开分享、私信传输与论坛社区。
               上传文件最大 50MB，支持图片、视频、音频、文档等多种格式。
             </p>
+            <p className="text-slate-700 leading-relaxed mb-4">
+              当前整个产品体系包含三个互相关联的站点：主站{' '}
+              <span className="font-medium">weavelink.pages.dev</span> 提供实际的云盘、分享与论坛功能；
+              本页面 <span className="font-medium">hiweave.pages.dev</span> 作为面向访客的「官网介绍」，
+              说明平台定位、技术栈与安全策略；同时我们还有一个独立的轻量应用集合站{' '}
+              <span className="font-medium">warehous.pages.dev</span>，用于按分类展示若干独立的小工具与实验性页面，
+              方便用户在不登录主站的情况下体验部分功能或周边应用。
+            </p>
+            <p className="text-slate-700 leading-relaxed mb-4">
+              介绍页本身不会存储用户文件，只负责说明与引导：您可以通过顶部和侧边导航了解产品特点，
+              在下方「招牌文章」区阅读三篇不同主题的长文示例（长月烬明节选、农村电商研究、中小企业数字化转型），
+              对平台支持的内容类型与排版效果有直观感受。
+            </p>
             <p className="text-slate-600 text-sm leading-relaxed">
               若您已在主站注册，可在下方填写账号名以便同步；未填写或账号不存在则视为公益支持，感谢您。
             </p>
